@@ -1,45 +1,54 @@
 package regtest
 
 import (
-	"bytes"
+	"compress/gzip"
 	"context"
-	"crypto/tls"
+	"errors"
 	"fmt"
+	"io"
 	"net/http"
+	"net/http/httptest"
 	"net/url"
-	"os/exec"
+	"os"
 	"testing"
-	"time"
 
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
-	"go.uber.org/multierr"
+	crname "github.com/google/go-containerregistry/pkg/name"
+	"github.com/google/go-containerregistry/pkg/registry"
+	"github.com/google/go-containerregistry/pkg/v1/remote"
+	"github.com/google/go-containerregistry/pkg/v1/remote/transport"
+	"github.com/google/go-containerregistry/pkg/v1/tarball"
 )
 
 func StartRegistry(t *testing.T, opts ...RegistryOption) Registry {
 	t.Helper()
 
-	reg := Registry{
-		t: t,
+	var cfg RegistryConfig
+
+	cfg.Option(opts...)
+	cfg.Default()
+
+	srv, err := registry.TLS(cfg.Domain)
+	if err != nil {
+		t.Log("registry could not be started")
+		t.FailNow()
 	}
 
-	reg.cfg.Option(opts...)
+	url, err := url.Parse(srv.URL)
+	if err != nil {
+		t.Log("registry URL could not be parsed")
+		t.FailNow()
+	}
 
-	require.NoError(t, reg.cfg.Default(), "unable to set defaults")
-
-	require.NotEmpty(t, reg.cfg.Runtime, "no container runtime available")
-
-	reg.run()
-
-	return reg
+	return Registry{
+		cfg:  cfg,
+		host: url.Host,
+		srv:  srv,
+		t:    t,
+	}
 }
 
 type RegistryConfig struct {
-	Port      int
-	EnableTLS bool
-	Name      string
-	Image     string
-	Runtime   string
+	Domain string
 }
 
 func (c *RegistryConfig) Option(opts ...RegistryOption) {
@@ -48,228 +57,118 @@ func (c *RegistryConfig) Option(opts ...RegistryOption) {
 	}
 }
 
-func (c *RegistryConfig) Default(opts ...RegistryOption) error {
-	if c.Image == "" {
-		c.Image = "registry:2"
+func (c *RegistryConfig) Default() {
+	if c.Domain == "" {
+		c.Domain = "registry.example.com"
 	}
-
-	if c.Name == "" {
-		suffix, err := randomString()
-		if err != nil {
-			return fmt.Errorf("generating random suffix: %w", err)
-		}
-
-		c.Name = fmt.Sprintf("registry-%s", suffix)
-	}
-
-	if c.Runtime == "" {
-		c.Runtime = containerRuntime()
-	}
-
-	return nil
 }
 
 type Registry struct {
-	actualPort int
-	cfg        RegistryConfig
-	images     []string
-	t          *testing.T
+	cfg  RegistryConfig
+	t    *testing.T
+	host string
+	srv  *httptest.Server
 }
 
-func (r *Registry) run() {
-	r.t.Helper()
+func (r *Registry) Host() string { return r.host }
+func (r *Registry) URL() string  { return r.srv.URL }
 
-	require.NoError(r.t, r.pull())
-
-	if r.cfg.EnableTLS {
-		require.NoError(r.t, r.startTLS())
-	} else {
-		require.NoError(r.t, r.start())
-	}
-
-	var out bytes.Buffer
-
-	getPort := exec.Command(r.cfg.Runtime, "port", r.cfg.Name)
-	getPort.Stdout = &out
-
-	if !assert.NoError(r.t, getPort.Run()) {
-		defer r.Stop()
-
-		assert.FailNow(r.t, "retrieving actual port")
-	}
-
-	port, err := parsePort(out.String())
-	if !assert.NoError(r.t, err) {
-		defer r.Stop()
-
-		assert.FailNow(r.t, "parsing actual port")
-	}
-
-	r.actualPort = port
-
-	require.Eventually(r.t, r.ping, 10*time.Second, 250*time.Millisecond)
-}
-
-func (r *Registry) pull() error {
-	pullImage := exec.Command(r.cfg.Runtime, "pull", r.cfg.Image)
-	if out, err := runWithOutput(pullImage); err != nil {
-		return fmt.Errorf("pulling registry image: %s: %w", out, err)
-	}
-
-	return nil
-}
-
-func (r *Registry) start() error {
-	port := "5000"
-
-	if r.cfg.Port != 0 {
-		port = fmt.Sprintf("%d:5000", r.cfg.Port)
-	}
-
-	run := exec.Command(r.cfg.Runtime, "run", "--rm", "-d",
-		"-p", port,
-		"--name", r.cfg.Name,
-		r.cfg.Image,
-	)
-
-	if out, err := runWithOutput(run); err != nil {
-		return fmt.Errorf("starting registry: %s: %w", out, err)
-	}
-
-	return nil
-}
-
-func (r *Registry) ping() bool {
-	return ping(fmt.Sprintf("localhost:%d", r.actualPort))
-}
-
-func (r *Registry) startTLS() error {
-	certDir, err := generateCerts(r.t.TempDir())
+func (r *Registry) Images(ctx context.Context) ([]string, error) {
+	reg, err := crname.NewRegistry(r.Host())
 	if err != nil {
-		return fmt.Errorf("generating CA: %w", err)
+		return nil, fmt.Errorf("parsing registry host: %w", err)
 	}
 
-	port := "443"
-
-	if r.cfg.Port != 0 {
-		port = fmt.Sprintf("%d:443", r.cfg.Port)
+	repos, err := remote.Catalog(context.TODO(), reg, remote.WithTransport(r.srv.Client().Transport))
+	if err != nil {
+		return nil, fmt.Errorf("retrieving repositories: %w", err)
 	}
 
-	run := exec.Command(r.cfg.Runtime, "run", "--rm", "-d",
-		"-p", port,
-		"--name", r.cfg.Name,
-		"-v", fmt.Sprintf("%s:/certs", certDir),
-		"-e", "REGISTRY_HTTP_ADDR=0.0.0.0:443",
-		"-e", "REGISTRY_HTTP_TLS_CERTIFICATE=/certs/server.crt",
-		"-e", "REGISTRY_HTTP_TLS_KEY=/certs/server.key",
-		r.cfg.Image,
-	)
+	var res []string
 
-	if out, err := runWithOutput(run); err != nil {
-		return fmt.Errorf("starting registry: %s: %w", out, err)
-	}
+	for _, repo := range repos {
+		repoObj, err := crname.NewRepository(fmt.Sprintf("%s/%s", r.cfg.Domain, repo))
+		if err != nil {
+			return nil, fmt.Errorf("parsing repository name %q: %w", repo, err)
+		}
 
-	return nil
-}
+		tags, err := remote.List(repoObj, remote.WithTransport(r.srv.Client().Transport), remote.WithContext(context.TODO()))
+		if err != nil {
+			return nil, fmt.Errorf("retrieving tags for repo %q: %w", repo, err)
+		}
 
-func (r *Registry) Stop() error {
-	r.t.Helper()
-
-	var collector error
-
-	stop := exec.Command(r.cfg.Runtime, "stop", r.cfg.Name)
-
-	if out, err := runWithOutput(stop); err != nil {
-		multierr.AppendInto(&collector, fmt.Errorf("stopping registry: %s: %w", out, err))
-	}
-
-	for _, image := range r.images {
-		remove := exec.Command(r.cfg.Runtime, "image", "rm", image)
-
-		if out, err := runWithOutput(remove); err != nil {
-			multierr.AppendInto(&collector, fmt.Errorf("removing loaded image %q: %s: %w", image, out, err))
+		for _, tag := range tags {
+			res = append(res, fmt.Sprintf("%s/%s:%s", r.cfg.Domain, repo, tag))
 		}
 	}
 
-	return collector
+	return res, nil
 }
 
-func (r *Registry) Load(image string, tarFile string) error {
-	r.t.Helper()
-
-	data, err := readTar(tarFile)
+func (r *Registry) HasImage(ctx context.Context, image string) (bool, error) {
+	n, err := crname.ParseReference(image)
 	if err != nil {
-		return fmt.Errorf("reading tar file %q: %w", tarFile, err)
+		return false, fmt.Errorf("parsing image name: %w", err)
 	}
 
-	load := exec.Command(r.cfg.Runtime, "load")
-	load.Stdin = bytes.NewBuffer(data)
+	if _, err := remote.Head(n, remote.WithContext(ctx), remote.WithTransport(r.srv.Client().Transport)); err != nil {
+		var tpErr *transport.Error
 
-	if out, err := runWithOutput(load); err != nil {
-		return fmt.Errorf("loading tarball %q: %s: %w", tarFile, out, err)
+		if errors.As(err, &tpErr) && tpErr.StatusCode == http.StatusNotFound {
+			return false, nil
+		}
+
+		return false, fmt.Errorf("checking for image existence: %w", err)
 	}
 
-	taggedImage := fmt.Sprintf("%s/%s", r.Host(), imageName(image))
+	return true, nil
+}
 
-	tag := exec.Command(r.cfg.Runtime, "tag", image, taggedImage)
-
-	if out, err := runWithOutput(tag); err != nil {
-		return fmt.Errorf("tagging image %q: %s: %w", image, out, err)
+func (r *Registry) Load(ctx context.Context, image string, tarFile string) error {
+	img, err := tarball.Image(func() (io.ReadCloser, error) {
+		return openTarFile(tarFile)
+	}, nil)
+	if err != nil {
+		return fmt.Errorf("loading image from file: %w", err)
 	}
 
-	r.images = append(r.images, taggedImage)
+	n, err := crname.ParseReference(image)
+	if err != nil {
+		return fmt.Errorf("parsing image name: %w", err)
+	}
 
-	push := exec.Command(r.cfg.Runtime, "push", "--tls-verify=false", taggedImage)
-
-	if out, err := runWithOutput(push); err != nil {
-		return fmt.Errorf("pushing image %q: %s: %w", taggedImage, out, err)
+	if err := remote.Write(n, img,
+		remote.WithContext(ctx),
+		remote.WithTransport(r.srv.Client().Transport),
+	); err != nil {
+		return fmt.Errorf("pushing image to registry: %w", err)
 	}
 
 	return nil
 }
 
-func (r *Registry) HasImage(ctx context.Context, name, tag string) (bool, error) {
-	uri := r.URL()
-	uri.Path = fmt.Sprintf("v2/%s/manifests/%s", name, tag)
+func (r *Registry) Stop() {
+	r.t.Helper()
 
-	req, err := http.NewRequestWithContext(ctx, http.MethodHead, uri.String(), nil)
-	if err != nil {
-		return false, fmt.Errorf("constructing request: %w", err)
-	}
-
-	tp := http.Transport{
-		TLSClientConfig: &tls.Config{
-			InsecureSkipVerify: true,
-		},
-	}
-
-	client := http.Client{
-		Transport: &tp,
-	}
-
-	res, err := client.Do(req)
-	if err != nil {
-		return false, fmt.Errorf("sending request: %w", err)
-	}
-
-	defer res.Body.Close()
-
-	return res.StatusCode == http.StatusOK, nil
+	r.srv.Close()
 }
 
-func (r *Registry) URL() url.URL {
-	res := url.URL{
-		Host:   r.Host(),
-		Scheme: "http",
+func openTarFile(path string) (io.ReadCloser, error) {
+	var reader io.ReadCloser
+
+	reader, err := os.Open(path)
+	if err != nil {
+		return nil, fmt.Errorf("opening tar file: %w", err)
 	}
 
-	if r.cfg.EnableTLS {
-		res.Scheme = "https"
+	unzip, err := gzip.NewReader(reader)
+	if err != nil {
+		if !errors.Is(err, gzip.ErrHeader) {
+			return nil, fmt.Errorf("unzipping file: %w", err)
+		}
+
+		return reader, nil
 	}
 
-	return res
-}
-
-func (r *Registry) Host() string {
-	return fmt.Sprintf("localhost:%d", r.actualPort)
+	return unzip, nil
 }
