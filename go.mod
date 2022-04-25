@@ -1,4 +1,4 @@
-module github.com/mt-sre/citools
+module github.com/mt-sre/go-ci
 
 go 1.17
 
