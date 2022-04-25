@@ -1,4 +1,4 @@
-package regtest
+package registry
 
 type RegistryOption interface {
 	ConfigureRegistry(*RegistryConfig)
