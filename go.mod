@@ -1,4 +1,4 @@
-module github.com/mt-sre/regtest
+module github.com/mt-sre/citools
 
 go 1.17
 

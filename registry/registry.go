@@ -1,4 +1,4 @@
-package regtest
+package registry
 
 import (
 	"compress/gzip"
@@ -59,7 +59,7 @@ func (c *RegistryConfig) Option(opts ...RegistryOption) {
 
 func (c *RegistryConfig) Default() {
 	if c.Domain == "" {
-		c.Domain = "registry.example.com"
+		c.Domain = "localhost"
 	}
 }
 

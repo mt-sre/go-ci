@@ -1,4 +1,4 @@
-package regtest
+package registry
 
 import (
 	"context"
@@ -16,7 +16,7 @@ func TestRegistryLoad(t *testing.T) {
 		ImageFile string
 	}{
 		"valid image": {
-			Image:     "registry.example.com/echo:v1.0.0",
+			Image:     "localhost.localdomain/echo:v1.0.0",
 			ImageFile: "./testimages/echo-v1.0.0.tar.gz",
 		},
 	} {
@@ -25,7 +25,7 @@ func TestRegistryLoad(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			reg := StartRegistry(t)
+			reg := StartRegistry(t, WithDomain("localhost.localdomain"))
 
 			defer reg.Stop()
 
