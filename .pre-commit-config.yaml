@@ -1,0 +1,33 @@
+---
+repos:
+# Fixers
+- repo: https://github.com/pre-commit/pre-commit-hooks
+  rev: v4.1.0
+  hooks:
+  - id: trailing-whitespace
+  - id: end-of-file-fixer
+    exclude: 'LICENSE'
+  - id: mixed-line-ending
+    args: [--fix=lf]
+
+- repo: https://github.com/dnephin/pre-commit-golang
+  rev: v0.5.0
+  hooks:
+  - id: go-mod-tidy
+  - id: go-fmt
+
+# Checkers
+- repo: https://github.com/pre-commit/pre-commit-hooks
+  rev: v4.1.0
+  hooks:
+  - id: check-added-large-files
+  - id: check-case-conflict
+  - id: check-merge-conflict
+  - id: check-symlinks
+  - id: check-yaml
+  - id: detect-private-key
+
+- repo: https://github.com/golangci/golangci-lint
+  rev: v1.45.2
+  hooks:
+  - id: golangci-lint
