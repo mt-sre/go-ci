@@ -71,7 +71,7 @@ func TestCommand(t *testing.T) {
 	}
 }
 
-func TestCommandError(t *testing.T) {
+func TestCommandErrorInterfaces(t *testing.T) {
 	t.Parallel()
 
 	require.Implements(t, new(error), new(CommandError))
