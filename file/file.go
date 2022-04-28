@@ -6,15 +6,24 @@ import (
 	"path/filepath"
 )
 
+// EntType describes the entity types which a filesystem may contain.
 type EntType string
 
 const (
+	// EntTypeNone matches no entities.
 	EntTypeNone EntType = ""
-	EntTypeAll  EntType = "all"
-	EntTypeDir  EntType = "dir"
+	// EntTypeAll matches all entity types.
+	EntTypeAll EntType = "all"
+	// EntTypeDir matches directory entities.
+	EntTypeDir EntType = "dir"
+	// EntTypeFile matches file entities.
 	EntTypeFile EntType = "file"
 )
 
+// Find functions similarly to GNU find searching recursively
+// from root for all entites which match the given options.
+// By default all entity types (file, directory) will be returned
+// including the root directory.
 func Find(root string, opts ...FindOption) ([]string, error) {
 	var cfg findConfig
 
@@ -85,12 +94,17 @@ type FindOption interface {
 	ConfigureFind(*findConfig)
 }
 
+// WithEntType selects which entity types will be
+// matched by the find function.
 type WithEntType EntType
 
 func (t WithEntType) ConfigureFind(c *findConfig) {
 	c.EntType = EntType(t)
 }
 
+// WithName supplies a glob pattern to filter the
+// matched entities to only those which match
+// the glob.
 type WithName string
 
 func (n WithName) ConfigureFind(c *findConfig) {
