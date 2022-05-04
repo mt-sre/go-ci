@@ -132,24 +132,31 @@ type CommandOption interface {
 	ConfigureCommand(*CommandConfig)
 }
 
+// WithArgs supplies the given args to the Command executable.
 type WithArgs []string
 
 func (wa WithArgs) ConfigureCommand(c *CommandConfig) {
 	c.Args = append(c.Args, wa...)
 }
 
+// WithContext runs the Command with the given context killing
+// the process when the context is done.
 type WithContext struct{ context.Context }
 
 func (wc WithContext) ConfigureCommand(c *CommandConfig) {
 	c.Ctx = wc.Context
 }
 
+// WithCurrentEnv passes the caller's OS environment to the
+// Command when set to 'true'.
 type WithCurrentEnv bool
 
 func (wc WithCurrentEnv) ConfigureCommand(c *CommandConfig) {
 	c.WithCurrentEnv = bool(wc)
 }
 
+// WithEnv adds key/value pairs to the Command's environment
+// from the supllied map's keys and values.
 type WithEnv map[string]string
 
 func (we WithEnv) ConfigureCommand(c *CommandConfig) {
@@ -158,18 +165,24 @@ func (we WithEnv) ConfigureCommand(c *CommandConfig) {
 	}
 }
 
+// WithStdin passes the supplied reader to the Command
+// which will be read if the Command consumes input.
 type WithStdin struct{ io.Reader }
 
 func (ws WithStdin) ConfigureCommand(c *CommandConfig) {
 	c.Stdin = ws.Reader
 }
 
+// WithConsoleOut writes the Command's 'out' and 'err' to
+// 'os.Stdout' when set to true.
 type WithConsoleOut bool
 
 func (wv WithConsoleOut) ConfigureCommand(c *CommandConfig) {
 	c.Verbose = bool(wv)
 }
 
+// WithWorkingDirectory runs the Command within the supplied
+// working directory.
 type WithWorkingDirectory string
 
 func (wd WithWorkingDirectory) ConfigureCommand(c *CommandConfig) {

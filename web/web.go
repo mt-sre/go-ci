@@ -8,12 +8,17 @@ import (
 	"os"
 )
 
+// FailedRequestError is returned when HTTP requests fail
+// with an unexpected status code.
 type FailedRequestError int
 
 func (e FailedRequestError) Error() string {
 	return fmt.Sprintf("request failed with status %d", e)
 }
 
+// DownloadFile retrieves the data contained at 'url' and write it to
+// the 'out' path provided. If the request fails or the file cannot be
+// written at the given location an error is returned.
 func DownloadFile(ctx context.Context, url, out string) error {
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
