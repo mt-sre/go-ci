@@ -28,6 +28,6 @@ repos:
   - id: detect-private-key
 
 - repo: https://github.com/golangci/golangci-lint
-  rev: v1.45.2
+  rev: v1.49.0
   hooks:
   - id: golangci-lint
