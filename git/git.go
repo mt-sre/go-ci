@@ -9,6 +9,8 @@ import (
 	"github.com/mt-sre/go-ci/command"
 )
 
+// RevParse runs "git rev-parse" given a RevParseFormat and a variadic
+// slice of options. An error is returned if a value cannot be obtained.
 func RevParse(ctx context.Context, format RevParseFormat, opts ...RevParseOption) (string, error) {
 	var cfg RevParseConfig
 
@@ -52,6 +54,8 @@ type RevParseOption interface {
 	ConfigureRevParse(*RevParseConfig)
 }
 
+// RevParseFormat is an enum of format
+// options for "git rev-parse"
 type RevParseFormat string
 
 func (f RevParseFormat) ToGitValue() string {
@@ -68,13 +72,21 @@ func (f RevParseFormat) ToGitValue() string {
 }
 
 const (
+	// RevParseFormatAbbrevRef is "--abbrev-ref"
 	RevParseFormatAbbrevRef RevParseFormat = "abbrev-ref"
-	RevParseFormatShort     RevParseFormat = "short"
-	RevParseFormatTopLevel  RevParseFormat = "top-level"
+	// RevParseFormatShort is "--short"
+	RevParseFormatShort RevParseFormat = "short"
+	// RevParseFormatTopLevel is "--show-toplevel"
+	RevParseFormatTopLevel RevParseFormat = "top-level"
 )
 
+// ErrNoTagsFound is returned when no tags
+// are found in the current git repository
 var ErrNoTagsFound = errors.New("no tags found")
 
+// LatestTag returns the latest tag for the current git repository
+// given a variadic slice of options. An error is returned
+// if the latest tag cannot be retrieved.
 func LatestTag(ctx context.Context, opts ...LatestTagOption) (string, error) {
 	var cfg LatestTagConfig
 
@@ -111,6 +123,9 @@ type LatestTagOption interface {
 	ConfigureLatestTag(*LatestTagConfig)
 }
 
+// ListTags lists all tags in the current git repository given
+// a variadic slice of options. An error is returned if the
+// the tags cannot be listed.
 func ListTags(ctx context.Context, opts ...ListTagsOption) ([]string, error) {
 	var cfg ListTagsConfig
 
@@ -158,6 +173,7 @@ type ListTagsOption interface {
 	ConfigureListTags(c *ListTagsConfig)
 }
 
+// SortKey is a key used to sort tags.
 type SortKey string
 
 func (k SortKey) ToGitValue() string {
@@ -170,9 +186,13 @@ func (k SortKey) ToGitValue() string {
 }
 
 const (
-	SortKeyNone         SortKey = "none"
+	// SortKeyNone is an empty sort key.
+	SortKeyNone SortKey = ""
+	// SortKeyCreationDate is a key which sorts by
+	// tag creation date.
 	SortKeyCreationDate SortKey = "creation date"
-	SortKeyRefName      SortKey = "refname"
+	// SortKeyRefName is a key which sorts by refname.
+	SortKeyRefName SortKey = "refname"
 )
 
 var git = command.NewCommandAlias("git")
