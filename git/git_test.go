@@ -2,68 +2,85 @@ package git
 
 import (
 	"context"
-	"os"
-	"path/filepath"
+	"os/exec"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
+	. "github.com/onsi/ginkgo/v2"
+	. "github.com/onsi/gomega"
+	. "github.com/onsi/gomega/gexec"
 )
 
-func TestRevParse(t *testing.T) {
-	t.Parallel()
+var _temp string
 
-	dir, err := os.Getwd()
-	require.NoError(t, err)
+func TestSuite(t *testing.T) {
+	_temp = t.TempDir()
 
-	for name, tc := range map[string]struct {
-		Format   RevParseFormat
-		Expected string
-	}{
-		"top-level": {
-			Format:   RevParseFormatTopLevel,
-			Expected: filepath.Join(dir, "testdata"),
-		},
-		"abbrev-ref": {
-			Format:   RevParseFormatAbbrevRef,
-			Expected: "test",
-		},
-		"short": {
-			Format:   RevParseFormatShort,
-			Expected: "7e892e7",
-		},
-	} {
-		tc := tc
+	RegisterFailHandler(Fail)
+	RunSpecs(t, "git suite")
+}
 
-		t.Run(name, func(t *testing.T) {
+var _ = BeforeSuite(func() {
+	var err error
+
+	cmd := exec.Command("./setup_test.sh", _temp)
+
+	sess, err := Start(cmd, GinkgoWriter, GinkgoWriter)
+	Expect(err).ToNot(HaveOccurred())
+
+	Eventually(sess).Should(Exit(0))
+
+})
+
+type revParseTestCase struct {
+	Format   RevParseFormat
+	Expected string
+}
+
+var _ = Describe("RevParse", func() {
+	temp := _temp
+
+	DescribeTable("Formats",
+		func(tc revParseTestCase) {
 			ctx := context.Background()
 
-			res, err := RevParse(ctx, tc.Format, WithWorkingDirectory("testdata"))
-			require.NoError(t, err)
+			res, err := RevParse(ctx, tc.Format, WithWorkingDirectory(temp))
+			Expect(err).ToNot(HaveOccurred())
 
-			assert.Equal(t, tc.Expected, res)
-		})
-	}
-}
+			Expect(res).To(Equal(tc.Expected))
+		},
+		Entry("top-level",
+			revParseTestCase{
+				Format:   RevParseFormatTopLevel,
+				Expected: temp,
+			},
+		),
+		Entry("abbrev-ref",
+			revParseTestCase{
+				Format:   RevParseFormatAbbrevRef,
+				Expected: "test",
+			},
+		),
+	)
+})
 
-func TestListTags(t *testing.T) {
-	t.Parallel()
+var _ = Describe("ListTags", func() {
+	It("should list tags", func() {
+		ctx := context.Background()
 
-	ctx := context.Background()
+		res, err := ListTags(ctx, WithWorkingDirectory(_temp))
+		Expect(err).ToNot(HaveOccurred())
 
-	res, err := ListTags(ctx, WithWorkingDirectory("testdata"))
-	require.NoError(t, err)
+		Expect(res).To(ContainElements([]string{"v1.0.0", "v2.0.0"}))
+	})
+})
 
-	assert.ElementsMatch(t, []string{"v1.0.0", "v2.0.0"}, res)
-}
+var _ = Describe("LatestTag", func() {
+	It("should return the latest tag", func() {
+		ctx := context.Background()
 
-func TestLatestTag(t *testing.T) {
-	t.Parallel()
+		res, err := LatestTag(ctx, WithWorkingDirectory(_temp))
+		Expect(err).ToNot(HaveOccurred())
 
-	ctx := context.Background()
-
-	res, err := LatestTag(ctx, WithWorkingDirectory("testdata"))
-	require.NoError(t, err)
-
-	assert.Equal(t, "v2.0.0", res)
-}
+		Expect(res).To(Equal("v2.0.0"))
+	})
+})
