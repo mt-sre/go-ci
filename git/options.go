@@ -25,6 +25,18 @@ func (w WithWorkingDirectory) ConfigureLatestTag(c *LatestTagConfig) {
 	c.WorkingDir = string(w)
 }
 
+func (w WithWorkingDirectory) ConfigureLatestVersion(c *LatestVersionConfig) {
+	c.WorkingDir = string(w)
+}
+
 func (w WithWorkingDirectory) ConfigureListTags(c *ListTagsConfig) {
+	c.WorkingDir = string(w)
+}
+
+func (w WithWorkingDirectory) ConfigureDiff(c *DiffConfig) {
+	c.WorkingDir = string(w)
+}
+
+func (w WithWorkingDirectory) ConfigureStatus(c *StatusConfig) {
 	c.WorkingDir = string(w)
 }
