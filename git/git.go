@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/blang/semver/v4"
 	"github.com/mt-sre/go-ci/command"
 )
 
@@ -123,6 +124,56 @@ type LatestTagOption interface {
 	ConfigureLatestTag(*LatestTagConfig)
 }
 
+// LatestVersion returns the latest tag, "v" prefixed,
+// as determined by comparing all tags as semantic versions.
+// An error will be returned if there are no available tags
+// or any tag is not parseable as a semantic version.
+func LatestVersion(ctx context.Context, opts ...LatestVersionOption) (string, error) {
+	var cfg LatestVersionConfig
+
+	cfg.Option(opts...)
+
+	var listOpts []ListTagsOption
+
+	if cfg.WorkingDir != "" {
+		listOpts = append(listOpts, WithWorkingDirectory(cfg.WorkingDir))
+	}
+
+	tags, err := ListTags(ctx, listOpts...)
+	if err != nil {
+		return "", fmt.Errorf("listing tags: %w", err)
+	}
+
+	var versions []semver.Version
+
+	for _, t := range tags {
+		ver, err := semver.ParseTolerant(t)
+		if err != nil {
+			return "", fmt.Errorf("parsing version %q: %w", ver, err)
+		}
+
+		versions = append(versions, ver)
+	}
+
+	semver.Sort(versions)
+
+	return "v" + versions[len(versions)-1].String(), nil
+}
+
+type LatestVersionConfig struct {
+	WorkingDir string
+}
+
+func (c *LatestVersionConfig) Option(opts ...LatestVersionOption) {
+	for _, opt := range opts {
+		opt.ConfigureLatestVersion(c)
+	}
+}
+
+type LatestVersionOption interface {
+	ConfigureLatestVersion(*LatestVersionConfig)
+}
+
 // ListTags lists all tags in the current git repository given
 // a variadic slice of options. An error is returned if the
 // the tags cannot be listed.
@@ -194,5 +245,147 @@ const (
 	// SortKeyRefName is a key which sorts by refname.
 	SortKeyRefName SortKey = "refname"
 )
+
+// Diff returns the current diff of the git repository
+// with a specified format and variadic slice of options.
+// An error is returned if the diff cannot be retrieved.
+func Diff(ctx context.Context, format DiffFormat, opts ...DiffOption) (string, error) {
+	var cfg DiffConfig
+
+	cfg.Option(opts...)
+
+	args := []string{"diff"}
+
+	if format != DiffFormatNone {
+		args = append(args, format.ToGitValue())
+	}
+
+	diffOpts := []command.CommandOption{
+		command.WithContext{Context: ctx},
+		command.WithArgs(args),
+	}
+
+	if cfg.WorkingDir != "" {
+		diffOpts = append(diffOpts, command.WithWorkingDirectory(cfg.WorkingDir))
+	}
+
+	diff := git(diffOpts...)
+	if err := diff.Run(); err != nil {
+		return "", fmt.Errorf("starting to get git diff: %w", err)
+	}
+
+	if !diff.Success() {
+		return "", fmt.Errorf("getting git diff: %w", diff.Error())
+	}
+
+	return strings.TrimSpace(diff.Stdout()), nil
+}
+
+type DiffConfig struct {
+	WorkingDir string
+}
+
+func (c *DiffConfig) Option(opts ...DiffOption) {
+	for _, opt := range opts {
+		opt.ConfigureDiff(c)
+	}
+}
+
+type DiffOption interface {
+	ConfigureDiff(*DiffConfig)
+}
+
+type DiffFormat string
+
+const (
+	// DiffFormatNone uses the default diff format.
+	DiffFormatNone DiffFormat = ""
+	// DiffFormatNameOnly returns only the names
+	// of modified files.
+	DiffFormatNameOnly DiffFormat = "name only"
+	// DiffFormatNameStatus returns both the name
+	// and type of change for modified files.
+	DiffFormatNameStatus DiffFormat = "name status"
+)
+
+func (f DiffFormat) ToGitValue() string {
+	switch f {
+	case DiffFormatNameOnly:
+		return "--name-only"
+	case DiffFormatNameStatus:
+		return "--name-status"
+	default:
+		return ""
+	}
+}
+
+// Status returns the current status of the git repository with
+// the given format and a variadic slice of options. An eror is
+// returned if the status cannot be retrieved.
+func Status(ctx context.Context, format StatusFormat, opts ...StatusOption) (string, error) {
+	var cfg StatusConfig
+
+	cfg.Option(opts...)
+
+	statusOpts := []command.CommandOption{
+		command.WithContext{Context: ctx},
+		command.WithArgs{"status", format.ToGitValue()},
+	}
+
+	if cfg.WorkingDir != "" {
+		statusOpts = append(statusOpts, command.WithWorkingDirectory(cfg.WorkingDir))
+	}
+
+	status := git(statusOpts...)
+
+	if err := status.Run(); err != nil {
+		return "", fmt.Errorf("starting to get git status: %w", err)
+	}
+
+	if !status.Success() {
+		return "", fmt.Errorf("getting git status: %w", status.Error())
+	}
+
+	return strings.TrimSpace(status.Stdout()), nil
+}
+
+type StatusConfig struct {
+	WorkingDir string
+}
+
+func (c *StatusConfig) Option(opts ...StatusOption) {
+	for _, opt := range opts {
+		opt.ConfigureStatus(c)
+	}
+}
+
+type StatusOption interface {
+	ConfigureStatus(*StatusConfig)
+}
+
+type StatusFormat string
+
+const (
+	// StatusFormatLong returns the long form of status.
+	StatusFormatLong StatusFormat = "long"
+	// StatusFormatPorcelain returns a consistent
+	// status without terminal control codes.
+	StatusFormatPorcelain StatusFormat = "porcelain"
+	// StatusFormatShort returns the short form of status
+	StatusFormatShort StatusFormat = "short"
+)
+
+func (f StatusFormat) ToGitValue() string {
+	switch f {
+	case StatusFormatLong:
+		return "--long"
+	case StatusFormatPorcelain:
+		return "--porcelain"
+	case StatusFormatShort:
+		return "--short"
+	default:
+		return "--long"
+	}
+}
 
 var git = command.NewCommandAlias("git")

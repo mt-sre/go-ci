@@ -84,3 +84,82 @@ var _ = Describe("LatestTag", func() {
 		Expect(res).To(Equal("v2.0.0"))
 	})
 })
+
+var _ = Describe("LatestVersion", func() {
+	It("should return the latest version", func() {
+		ctx := context.Background()
+
+		res, err := LatestVersion(ctx, WithWorkingDirectory(_temp))
+		Expect(err).ToNot(HaveOccurred())
+
+		Expect(res).To(Equal("v2.0.0"))
+	})
+})
+
+type statusTestCase struct {
+	Format   StatusFormat
+	Expected string
+}
+
+var _ = DescribeTable("Status",
+	func(tc statusTestCase) {
+		ctx := context.Background()
+
+		res, err := Status(ctx, tc.Format, WithWorkingDirectory(_temp))
+		Expect(err).ToNot(HaveOccurred())
+
+		Expect(res).To(Equal(tc.Expected))
+	},
+	Entry("porcelain",
+		statusTestCase{
+			Format:   StatusFormatPorcelain,
+			Expected: "",
+		},
+	),
+	Entry("long",
+		statusTestCase{
+			Format:   StatusFormatLong,
+			Expected: "On branch test\nnothing to commit, working tree clean",
+		},
+	),
+	Entry("short",
+		statusTestCase{
+			Format:   StatusFormatShort,
+			Expected: "",
+		},
+	),
+)
+
+type diffTestCase struct {
+	Format   DiffFormat
+	Expected string
+}
+
+var _ = DescribeTable("Diff",
+	func(tc diffTestCase) {
+		ctx := context.Background()
+
+		res, err := Diff(ctx, tc.Format, WithWorkingDirectory(_temp))
+		Expect(err).ToNot(HaveOccurred())
+
+		Expect(res).To(Equal(tc.Expected))
+	},
+	Entry("none",
+		diffTestCase{
+			Format:   DiffFormatNone,
+			Expected: "",
+		},
+	),
+	Entry("name-only",
+		diffTestCase{
+			Format:   DiffFormatNameOnly,
+			Expected: "",
+		},
+	),
+	Entry("name-status",
+		diffTestCase{
+			Format:   DiffFormatNameStatus,
+			Expected: "",
+		},
+	),
+)
