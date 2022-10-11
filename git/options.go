@@ -1,5 +1,19 @@
 package git
 
+// WithDiffFormat applies the given DiffFormat
+type WithDiffFormat DiffFormat
+
+func (w WithDiffFormat) ConfigureDiff(c *DiffConfig) {
+	c.Format = DiffFormat(w)
+}
+
+// WithRevParseFormat applies the given RevParseFormat
+type WithRevParseFormat RevParseFormat
+
+func (w WithRevParseFormat) ConfigureRevParse(c *RevParseConfig) {
+	c.Format = RevParseFormat(w)
+}
+
 // WithSorted enables sorting.
 type WithSorted bool
 
@@ -12,6 +26,13 @@ type WithSortKey SortKey
 
 func (w WithSortKey) ConfigureListTags(c *ListTagsConfig) {
 	c.SortKey = SortKey(w)
+}
+
+// WithStatusFormat applies the given StatusFormat
+type WithStatusFormat StatusFormat
+
+func (w WithStatusFormat) ConfigureStatus(c *StatusConfig) {
+	c.Format = StatusFormat(w)
 }
 
 // WithWorkingDirectory applies the given working directory.

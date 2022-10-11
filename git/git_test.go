@@ -32,7 +32,7 @@ var _ = BeforeSuite(func() {
 })
 
 type revParseTestCase struct {
-	Format   RevParseFormat
+	Options  []RevParseOption
 	Expected string
 }
 
@@ -43,20 +43,26 @@ var _ = Describe("RevParse", func() {
 		func(tc revParseTestCase) {
 			ctx := context.Background()
 
-			res, err := RevParse(ctx, tc.Format, WithWorkingDirectory(temp))
+			opts := append(tc.Options, WithWorkingDirectory(temp))
+
+			res, err := RevParse(ctx, opts...)
 			Expect(err).ToNot(HaveOccurred())
 
 			Expect(res).To(Equal(tc.Expected))
 		},
 		Entry("top-level",
 			revParseTestCase{
-				Format:   RevParseFormatTopLevel,
+				Options: []RevParseOption{
+					WithRevParseFormat(RevParseFormatTopLevel),
+				},
 				Expected: temp,
 			},
 		),
 		Entry("abbrev-ref",
 			revParseTestCase{
-				Format:   RevParseFormatAbbrevRef,
+				Options: []RevParseOption{
+					WithRevParseFormat(RevParseFormatAbbrevRef),
+				},
 				Expected: "test",
 			},
 		),
@@ -97,7 +103,7 @@ var _ = Describe("LatestVersion", func() {
 })
 
 type statusTestCase struct {
-	Format   StatusFormat
+	Options  []StatusOption
 	Expected string
 }
 
@@ -105,33 +111,47 @@ var _ = DescribeTable("Status",
 	func(tc statusTestCase) {
 		ctx := context.Background()
 
-		res, err := Status(ctx, tc.Format, WithWorkingDirectory(_temp))
+		opts := append(tc.Options, WithWorkingDirectory(_temp))
+
+		res, err := Status(ctx, opts...)
 		Expect(err).ToNot(HaveOccurred())
 
 		Expect(res).To(Equal(tc.Expected))
 	},
+	Entry("no format",
+		statusTestCase{
+			Options:  []StatusOption{},
+			Expected: "On branch test\nnothing to commit, working tree clean",
+		},
+	),
 	Entry("porcelain",
 		statusTestCase{
-			Format:   StatusFormatPorcelain,
+			Options: []StatusOption{
+				WithStatusFormat(StatusFormatPorcelain),
+			},
 			Expected: "",
 		},
 	),
 	Entry("long",
 		statusTestCase{
-			Format:   StatusFormatLong,
+			Options: []StatusOption{
+				WithStatusFormat(StatusFormatLong),
+			},
 			Expected: "On branch test\nnothing to commit, working tree clean",
 		},
 	),
 	Entry("short",
 		statusTestCase{
-			Format:   StatusFormatShort,
+			Options: []StatusOption{
+				WithStatusFormat(StatusFormatShort),
+			},
 			Expected: "",
 		},
 	),
 )
 
 type diffTestCase struct {
-	Format   DiffFormat
+	Options  []DiffOption
 	Expected string
 }
 
@@ -139,26 +159,34 @@ var _ = DescribeTable("Diff",
 	func(tc diffTestCase) {
 		ctx := context.Background()
 
-		res, err := Diff(ctx, tc.Format, WithWorkingDirectory(_temp))
+		opts := append(tc.Options, WithWorkingDirectory(_temp))
+
+		res, err := Diff(ctx, opts...)
 		Expect(err).ToNot(HaveOccurred())
 
 		Expect(res).To(Equal(tc.Expected))
 	},
-	Entry("none",
+	Entry("no format",
 		diffTestCase{
-			Format:   DiffFormatNone,
+			Options: []DiffOption{
+				WithDiffFormat(DiffFormatNameOnly),
+			},
 			Expected: "",
 		},
 	),
 	Entry("name-only",
 		diffTestCase{
-			Format:   DiffFormatNameOnly,
+			Options: []DiffOption{
+				WithDiffFormat(DiffFormatNameOnly),
+			},
 			Expected: "",
 		},
 	),
 	Entry("name-status",
 		diffTestCase{
-			Format:   DiffFormatNameStatus,
+			Options: []DiffOption{
+				WithDiffFormat(DiffFormatNameStatus),
+			},
 			Expected: "",
 		},
 	),

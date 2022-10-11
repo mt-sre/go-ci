@@ -12,17 +12,25 @@ import (
 
 // RevParse runs "git rev-parse" given a RevParseFormat and a variadic
 // slice of options. An error is returned if a value cannot be obtained.
-func RevParse(ctx context.Context, format RevParseFormat, opts ...RevParseOption) (string, error) {
+func RevParse(ctx context.Context, opts ...RevParseOption) (string, error) {
 	var cfg RevParseConfig
 
 	cfg.Option(opts...)
 
+	args := []string{"rev-parse"}
+
+	if cfg.Format != "" {
+		args = append(args, cfg.Format.ToGitValue())
+
+	}
+
+	if cfg.Format != RevParseFormatTopLevel {
+		args = append(args, "HEAD")
+	}
+
 	cmdOpts := []command.CommandOption{
 		command.WithContext{Context: ctx},
-		command.WithArgs{"rev-parse", format.ToGitValue()},
-	}
-	if format != RevParseFormatTopLevel {
-		cmdOpts = append(cmdOpts, command.WithArgs{"HEAD"})
+		command.WithArgs(args),
 	}
 
 	if cfg.WorkingDir != "" {
@@ -42,6 +50,7 @@ func RevParse(ctx context.Context, format RevParseFormat, opts ...RevParseOption
 }
 
 type RevParseConfig struct {
+	Format     RevParseFormat
 	WorkingDir string
 }
 
@@ -249,15 +258,15 @@ const (
 // Diff returns the current diff of the git repository
 // with a specified format and variadic slice of options.
 // An error is returned if the diff cannot be retrieved.
-func Diff(ctx context.Context, format DiffFormat, opts ...DiffOption) (string, error) {
+func Diff(ctx context.Context, opts ...DiffOption) (string, error) {
 	var cfg DiffConfig
 
 	cfg.Option(opts...)
 
 	args := []string{"diff"}
 
-	if format != DiffFormatNone {
-		args = append(args, format.ToGitValue())
+	if cfg.Format != "" {
+		args = append(args, cfg.Format.ToGitValue())
 	}
 
 	diffOpts := []command.CommandOption{
@@ -282,6 +291,7 @@ func Diff(ctx context.Context, format DiffFormat, opts ...DiffOption) (string, e
 }
 
 type DiffConfig struct {
+	Format     DiffFormat
 	WorkingDir string
 }
 
@@ -298,8 +308,6 @@ type DiffOption interface {
 type DiffFormat string
 
 const (
-	// DiffFormatNone uses the default diff format.
-	DiffFormatNone DiffFormat = ""
 	// DiffFormatNameOnly returns only the names
 	// of modified files.
 	DiffFormatNameOnly DiffFormat = "name only"
@@ -322,14 +330,20 @@ func (f DiffFormat) ToGitValue() string {
 // Status returns the current status of the git repository with
 // the given format and a variadic slice of options. An eror is
 // returned if the status cannot be retrieved.
-func Status(ctx context.Context, format StatusFormat, opts ...StatusOption) (string, error) {
+func Status(ctx context.Context, opts ...StatusOption) (string, error) {
 	var cfg StatusConfig
 
 	cfg.Option(opts...)
 
+	args := []string{"status"}
+
+	if cfg.Format != "" {
+		args = append(args, cfg.Format.ToGitValue())
+	}
+
 	statusOpts := []command.CommandOption{
 		command.WithContext{Context: ctx},
-		command.WithArgs{"status", format.ToGitValue()},
+		command.WithArgs(args),
 	}
 
 	if cfg.WorkingDir != "" {
@@ -350,6 +364,7 @@ func Status(ctx context.Context, format StatusFormat, opts ...StatusOption) (str
 }
 
 type StatusConfig struct {
+	Format     StatusFormat
 	WorkingDir string
 }
 
