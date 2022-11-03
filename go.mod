@@ -5,7 +5,7 @@ go 1.18
 require (
 	github.com/blang/semver/v4 v4.0.0
 	github.com/onsi/ginkgo/v2 v2.4.0
-	github.com/onsi/gomega v1.23.0
+	github.com/onsi/gomega v1.24.0
 	github.com/stretchr/testify v1.8.1
 )
 
