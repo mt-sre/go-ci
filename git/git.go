@@ -153,6 +153,10 @@ func LatestVersion(ctx context.Context, opts ...LatestVersionOption) (string, er
 		return "", fmt.Errorf("listing tags: %w", err)
 	}
 
+	if len(tags) < 1 {
+		return "", ErrNoTagsFound
+	}
+
 	var versions []semver.Version
 
 	for _, t := range tags {
