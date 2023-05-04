@@ -15,8 +15,7 @@ import (
 
 // TestDownloadFile tests the behavior of the DownloadFile
 // function in different scenarios
-type ErrorAssertionFunc func(t require.TestingT, err error, msgAndArgs...interface{})
-
+type ErrorAssertionFunc func(t require.TestingT, err error, msgAndArgs ...interface{})
 
 func TestDownloadFile(t *testing.T) {
 	expectedContent := []byte("hello")
@@ -49,7 +48,7 @@ func TestDownloadFile(t *testing.T) {
 			Name:      "invalid URL",
 			Url:       "invalid_url",
 			Out:       "outfile1",
-		    Assertion: require.Error,
+			Assertion: require.Error,
 		},
 		{
 			Name:      "server error",
