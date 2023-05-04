@@ -40,28 +40,28 @@ func TestDownloadFile(t *testing.T) {
 	assert.Equal(t, expectedContent, data)
 
 	tests := []struct {
-		Name        string
-		Url         string
-		Out         string
-		Assertion   ErrorAssertionFunc
+		Name      string
+		Url       string
+		Out       string
+		Assertion ErrorAssertionFunc
 	}{
 		{
-			Name:        "invalid URL",
-			Url:         "invalid_url",
-			Out:         "outfile1",
-		    Assertion:   require.Error,
+			Name:      "invalid URL",
+			Url:       "invalid_url",
+			Out:       "outfile1",
+		    Assertion: require.Error,
 		},
 		{
-			Name:        "server error",
-			Url:         "",
-			Out:         "outfile2",
-			Assertion:   require.Error,
+			Name:      "server error",
+			Url:       "",
+			Out:       "outfile2",
+			Assertion: require.Error,
 		},
 		{
-			Name:        "file creation error",
-			Url:         srv.URL,
-			Out:         "/nonexistent/dir/outfile3",
-			Assertion:   require.Error,
+			Name:      "file creation error",
+			Url:       srv.URL,
+			Out:       "/nonexistent/dir/outfile3",
+			Assertion: require.Error,
 		},
 	}
 
