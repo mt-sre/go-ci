@@ -18,15 +18,15 @@ import (
 type ErrorAssertionFunc func(t *testing.T, err error)
 
 func NoError(t *testing.T, err error) {
-    if err != nil {
-        t.Fatalf("expected no error but got: %v", err)
-    }
+	if err != nil {
+		t.Fatalf("expected no error but got: %v", err)
+	}
 }
 
 func Error(t *testing.T, err error) {
-    if err == nil {
-        t.Fatalf("expected an error but got none")
-    }
+	if err == nil {
+		t.Fatalf("expected an error but got none")
+	}
 }
 
 func TestDownloadFile(t *testing.T) {
@@ -51,11 +51,11 @@ func TestDownloadFile(t *testing.T) {
 	assert.Equal(t, expectedContent, data)
 
 	tests := []struct {
-		Name         string
-		Url          string
-		Out          string
-		ExpectError  bool
-		Assertion    ErrorAssertionFunc
+		Name        string
+		Url         string
+		Out         string
+		ExpectError bool
+		Assertion   ErrorAssertionFunc
 	}{
 		{
 			Name:        "invalid URL",

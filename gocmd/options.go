@@ -15,25 +15,25 @@ func (w WithWorkingDir) ConfigureModule(c *ModuleConfig) {
 type tidyOptionFunc func(*TidyConfig)
 
 type tidyOption struct {
-    f tidyOptionFunc
+	f tidyOptionFunc
 }
 
 func (t *tidyOption) ConfigureTidy(c *TidyConfig) {
-    t.f(c)
+	t.f(c)
 }
 
 func WithGoVersion(version string) TidyOption {
-    return &tidyOption{
-        f: func(c *TidyConfig) {
-            c.GoVersion = version
-        },
-    }
+	return &tidyOption{
+		f: func(c *TidyConfig) {
+			c.GoVersion = version
+		},
+	}
 }
 
 func WithBinWorkingDir(dir string) TidyOption {
-    return &tidyOption{
-        f: func(c *TidyConfig) {
-            c.WorkingDir = dir
-        },
-    }
+	return &tidyOption{
+		f: func(c *TidyConfig) {
+			c.WorkingDir = dir
+		},
+	}
 }
