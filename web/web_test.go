@@ -15,19 +15,8 @@ import (
 
 // TestDownloadFile tests the behavior of the DownloadFile
 // function in different scenarios
-type ErrorAssertionFunc func(t *testing.T, err error)
+type ErrorAssertionFunc func(t require.TestingT, err error, msgAndArgs...interface{})
 
-func NoError(t *testing.T, err error) {
-	if err != nil {
-		t.Fatalf("expected no error but got: %v", err)
-	}
-}
-
-func Error(t *testing.T, err error) {
-	if err == nil {
-		t.Fatalf("expected an error but got none")
-	}
-}
 
 func TestDownloadFile(t *testing.T) {
 	expectedContent := []byte("hello")
@@ -54,29 +43,25 @@ func TestDownloadFile(t *testing.T) {
 		Name        string
 		Url         string
 		Out         string
-		ExpectError bool
 		Assertion   ErrorAssertionFunc
 	}{
 		{
 			Name:        "invalid URL",
 			Url:         "invalid_url",
 			Out:         "outfile1",
-			ExpectError: true,
-			Assertion:   Error,
+		    Assertion:   require.Error,
 		},
 		{
 			Name:        "server error",
 			Url:         "",
 			Out:         "outfile2",
-			ExpectError: true,
-			Assertion:   Error,
+			Assertion:   require.Error,
 		},
 		{
 			Name:        "file creation error",
 			Url:         srv.URL,
 			Out:         "/nonexistent/dir/outfile3",
-			ExpectError: true,
-			Assertion:   Error,
+			Assertion:   require.Error,
 		},
 	}
 
