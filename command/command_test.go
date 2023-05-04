@@ -76,3 +76,14 @@ func TestCommandErrorInterfaces(t *testing.T) {
 
 	require.Implements(t, new(error), new(CommandError))
 }
+
+// TestNewCommandAlias tests a new command alias path and
+// command arguments.
+func TestNewCommandAlias(t *testing.T) {
+	testAlias := NewCommandAlias("ls", "-la")
+
+	cmd := testAlias(WithCurrentEnv(true))
+
+	assert.Equal(t, "/usr/bin/ls", cmd.cmd.Path, "expected command path /usr/bin/ls")
+	assert.Equal(t, []string{"ls", "-la"}, cmd.cmd.Args, "expected command arguments [ls -la]")
+}
