@@ -2,7 +2,7 @@
 repos:
 # Fixers
 - repo: https://github.com/pre-commit/pre-commit-hooks
-  rev: v4.4.0
+  rev: v4.1.0
   hooks:
   - id: trailing-whitespace
   - id: end-of-file-fixer
@@ -11,14 +11,14 @@ repos:
     args: [--fix=lf]
 
 - repo: https://github.com/dnephin/pre-commit-golang
-  rev: v0.5.1
+  rev: v0.5.0
   hooks:
   - id: go-mod-tidy
   - id: go-fmt
 
 # Checkers
 - repo: https://github.com/pre-commit/pre-commit-hooks
-  rev: v4.4.0
+  rev: v4.1.0
   hooks:
   - id: check-added-large-files
   - id: check-case-conflict
@@ -28,6 +28,6 @@ repos:
   - id: detect-private-key
 
 - repo: https://github.com/golangci/golangci-lint
-  rev: v1.52.2
+  rev: v1.49.0
   hooks:
   - id: golangci-lint
