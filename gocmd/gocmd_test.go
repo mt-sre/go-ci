@@ -6,6 +6,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	
 )
 
 func TestModule(t *testing.T) {
@@ -20,24 +21,10 @@ func TestModule(t *testing.T) {
 	assert.Equal(t, "github.com/mt-sre/go-ci", module)
 }
 
-// TestTidyConfig_Option tests the Option method of the
-// TidyConfig struct, which allows setting configuration options
 func TestTidyConfig_Option(t *testing.T) {
 	config := &TidyConfig{}
 
-	withGoVersion := func(version string) TidyOption {
-		return tidyOptionFunc(func(c *TidyConfig) {
-			c.GoVersion = version
-		})
-	}
-
-	withWorkingDir := func(dir string) TidyOption {
-		return tidyOptionFunc(func(c *TidyConfig) {
-			c.WorkingDir = dir
-		})
-	}
-
-	config.Option(withGoVersion("1.16.4"), withWorkingDir("/tmp"))
+	config.Option(WithGoVersion("1.16.4"), WithBinWorkingDir("/tmp"))
 
 	if config.GoVersion != "1.16.4" {
 		t.Errorf("expected Go version to be %q, got %q", "1.16.4", config.GoVersion)
@@ -48,12 +35,7 @@ func TestTidyConfig_Option(t *testing.T) {
 	}
 }
 
-type tidyOptionFunc func(*TidyConfig)
-
-func (f tidyOptionFunc) ConfigureTidy(config *TidyConfig) {
-	f(config)
-}
-
+// TestNewGoCmd tests the behavior of the NewGoCmd function
 func TestNewGoCmd(t *testing.T) {
 	t.Run("DefaultConfig", func(t *testing.T) {
 		assert := assert.New(t)

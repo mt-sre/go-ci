@@ -15,6 +15,20 @@ import (
 
 // TestDownloadFile tests the behavior of the DownloadFile
 // function in different scenarios
+type ErrorAssertionFunc func(t *testing.T, err error)
+
+func NoError(t *testing.T, err error) {
+    if err != nil {
+        t.Fatalf("expected no error but got: %v", err)
+    }
+}
+
+func Error(t *testing.T, err error) {
+    if err == nil {
+        t.Fatalf("expected an error but got none")
+    }
+}
+
 func TestDownloadFile(t *testing.T) {
 	expectedContent := []byte("hello")
 
@@ -37,49 +51,49 @@ func TestDownloadFile(t *testing.T) {
 	assert.Equal(t, expectedContent, data)
 
 	tests := []struct {
-		name        string
-		url         string
-		out         string
-		expectError bool
+		Name         string
+		Url          string
+		Out          string
+		ExpectError  bool
+		Assertion    ErrorAssertionFunc
 	}{
 		{
-			name:        "invalid URL",
-			url:         "invalid_url",
-			out:         "outfile1",
-			expectError: true,
+			Name:        "invalid URL",
+			Url:         "invalid_url",
+			Out:         "outfile1",
+			ExpectError: true,
+			Assertion:   Error,
 		},
 		{
-			name:        "server error",
-			url:         "",
-			out:         "outfile2",
-			expectError: true,
+			Name:        "server error",
+			Url:         "",
+			Out:         "outfile2",
+			ExpectError: true,
+			Assertion:   Error,
 		},
 		{
-			name:        "file creation error",
-			url:         srv.URL,
-			out:         "/nonexistent/dir/outfile3",
-			expectError: true,
+			Name:        "file creation error",
+			Url:         srv.URL,
+			Out:         "/nonexistent/dir/outfile3",
+			ExpectError: true,
+			Assertion:   Error,
 		},
 	}
 
 	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
-			out := filepath.Join(t.TempDir(), tc.out)
+		t.Run(tc.Name, func(t *testing.T) {
+			out := filepath.Join(t.TempDir(), tc.Out)
 
-			if tc.name == "server error" {
+			if tc.Name == "server error" {
 				srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 					http.Error(w, "server error", http.StatusInternalServerError)
 				}))
 				defer srv.Close()
-				tc.url = srv.URL
+				tc.Url = srv.URL
 			}
 
-			err := web.DownloadFile(context.Background(), tc.url, out)
-			if tc.expectError {
-				require.Error(t, err)
-			} else {
-				require.NoError(t, err)
-			}
+			err := web.DownloadFile(context.Background(), tc.Url, out)
+			tc.Assertion(t, err)
 		})
 	}
 }
