@@ -2,11 +2,11 @@
 
 set -exvo pipefail -o nounset
 
-# utilize local go 1.19 version if available
-GO_1_19="/opt/go/1.19.3/bin"
+# utilize local go 1.20 version if available
+GO_1_20="/opt/go/1.20.6/bin"
 
-if [ -d  "${GO_1_19}" ]; then
-     PATH="${GO_1_19}:${PATH}"
+if [ -d  "${GO_1_20}" ]; then
+     PATH="${GO_1_20}:${PATH}"
 fi
 
 PROJECT_ROOT=$(git rev-parse --show-toplevel)

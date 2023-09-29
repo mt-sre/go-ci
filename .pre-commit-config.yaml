@@ -11,7 +11,7 @@ repos:
     args: [--fix=lf]
 
 - repo: https://github.com/dnephin/pre-commit-golang
-  rev: v0.5.0
+  rev: v0.5.1
   hooks:
   - id: go-mod-tidy
   - id: go-fmt
@@ -28,6 +28,6 @@ repos:
   - id: detect-private-key
 
 - repo: https://github.com/golangci/golangci-lint
-  rev: v1.49.0
+  rev: v1.54.2
   hooks:
   - id: golangci-lint
