@@ -5,7 +5,7 @@ go 1.19
 require (
 	github.com/blang/semver/v4 v4.0.0
 	github.com/onsi/ginkgo/v2 v2.12.1
-	github.com/onsi/gomega v1.27.10
+	github.com/onsi/gomega v1.28.0
 	github.com/stretchr/testify v1.8.4
 )
 
