@@ -11,6 +11,9 @@ function setup() {
 
      git init
 
+     git config --global user.name "test"
+     git config --global user.email "test@example.com"
+
      touch file
 
      git add file

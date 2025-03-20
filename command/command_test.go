@@ -71,6 +71,7 @@ func TestCommand(t *testing.T) {
 			tc.Assertion(t, tc.Command.Run())
 			assert.Equal(t, tc.ExpectedOutput, tc.Command.Stdout())
 			assert.Equal(t, tc.ExpectedExitCode, tc.Command.ExitCode(), tc.Command.CombinedOutput())
+
 		})
 	}
 }
