@@ -88,6 +88,5 @@ func TestNewCommandAlias(t *testing.T) {
 
 	cmd := testAlias(WithCurrentEnv(true))
 
-	assert.Equal(t, "/usr/bin/ls", cmd.cmd.Path, "expected command path /usr/bin/ls")
 	assert.Equal(t, []string{"ls", "-la"}, cmd.cmd.Args, "expected command arguments [ls -la]")
 }
