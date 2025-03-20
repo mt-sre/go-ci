@@ -1,3 +1,7 @@
+// SPDX-FileCopyrightText: 2025 Red Hat, Inc. <sd-mt-sre@redhat.com>
+//
+// SPDX-License-Identifier: Apache-2.0
+
 package git
 
 // WithDiffFormat applies the given DiffFormat

@@ -1,5 +1,9 @@
 #!/bin/bash
 
+# SPDX-FileCopyrightText: 2025 Red Hat, Inc. <sd-mt-sre@redhat.com>
+#
+# SPDX-License-Identifier: Apache-2.0
+
 set -eo pipefail -o nounset
 
 function setup() {
